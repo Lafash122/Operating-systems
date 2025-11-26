@@ -1,2 +1,2 @@
 # Operating-systems
-OS solutions 2 sem
+Solutions labs on the Operating Sistems 2 semester
