@@ -5,12 +5,21 @@
 
 #include <sys/types.h>
 #include <stddef.h>
+#include <stdatomic.h>
+
+#ifndef STACK_SIZE
+#define STACK_SIZE 2 * 1024 * 1024
+#endif
 
 typedef struct mythread
 {
     pid_t tid;
     void *stack;
     size_t stack_size;
+
+    atomic_int done;
+    atomic_int detached;
+    atomic_int joined;
 
     void *retval;
 
