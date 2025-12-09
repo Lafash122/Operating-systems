@@ -1,28 +1,52 @@
 #define _GNU_SOURCE
 
-#include "list.h"
+#include "mythread.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
-#include <stdatomic.h>
-#include <string.h>
+#include <stdint.h>
 
-atomic_ulong t_incr = 0;
-atomic_ulong t_decr = 0;
-atomic_ulong t_comp = 0;
+void *mythread_func(void *arg) {
+    int val = *(int *)arg;
+    int result = val * 2;
+    return (void *)(intptr_t)result;
+}
 
-atomic_ulong t_swap = 0;
+int main() {
+    int thread_number = 10;
+    int err;
+    mythread_t threads[thread_number];
 
-int main(int argc, char **argv) {
-    if (argc < 2) {
-        printf("bad input\n");
-        return -1;
+    int data[thread_number];
+    for (int i = 0; i < thread_number; i++) {
+        data[i] = i;
+        err = mythread_create(&threads[i], mythread_func, &data[i]);
+        if (err != 0) {
+            printf("mypthread_create() failed: %d\n", err);
+            return -1;
+        }
     }
 
-    int list_size = atoi(argv[1]);
-    printf("%d\n", list_size);
-    //pthread_create();
+    for (int i = 0; i < thread_number; i++) {
+        if (i % 2 == 0) {
+            intptr_t res;
+            err = mythread_join(&threads[i], (void **)&res);
+            if (err != 0) {
+                printf("mypthread_join() failed: %d\n", err);
+                return -1;
+            }
+
+            data[i] = (int)res;
+            printf("thread: %d -- %d\n", i, data[i]);
+        }
+        else {
+            err = mythread_detach(&threads[i]);
+            if (err != 0) {
+                printf("mypthread_join() failed: %d\n", err);
+                return -1;
+            }
+        }
+    }
 
     return 0;
 }
