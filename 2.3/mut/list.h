@@ -14,7 +14,6 @@ typedef struct _Node {
 
 typedef struct _Storage {
     Node *first;
-    int size;
 } Storage;
 
 Storage *list_init(int size);

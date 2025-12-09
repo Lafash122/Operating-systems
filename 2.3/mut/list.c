@@ -38,7 +38,6 @@ Storage *list_init(int size) {
         abort();
     }
 
-    list->size = size;
     list->first = node_init();
 
     Node *curr = list->first;
@@ -81,10 +80,10 @@ int swap_nodes(Node *prev, Node *left, Node *right) {
     left->next = right->next;
     right->next = left;
 
+    pthread_mutex_unlock(&(right->sync));
+    pthread_mutex_unlock(&(left->sync));
     if (prev)
         pthread_mutex_unlock(&(prev->sync));
-    pthread_mutex_unlock(&(left->sync));
-    pthread_mutex_unlock(&(right->sync));
 
     return 1;
 }
