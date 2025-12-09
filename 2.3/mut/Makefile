@@ -1,25 +1,16 @@
 CC=gcc
-CFLAGS= -g -Wall -pthread
-AR = ar
-ARFLAGS = rcs
+CFLAGS=-Wall -Wextra -pthread
 
-LIBSRC = mythread.c
-LIBOBJ = $(LIBSRC:.c=.o)
-LIBNAME = libmythread.a
+all: main
 
-TESTSRC = main.c
-TESTBIN = test_threads
+main: main.o list.o
+	$(CC) $(CFLAGS) -o main main.o list.o
 
-all: $(LIBNAME) $(TESTBIN)
+main.o: main.c list.h
+	$(CC) $(CFLAGS) -c main.c
 
-$(LIBNAME): $(LIBOBJ)
-	$(AR) $(ARFLAGS) $@ $^
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(TESTBIN): $(TESTSRC) $(LIBNAME)
-	$(CC) $(CFLAGS) $< -L. -lmythread -o $@
+list.o: list.c list.h
+	$(CC) $(CFLAGS) -c list.c
 
 clean:
-	rm -f $(LIBOBJ) $(LIBNAME) $(TESTBIN)
+	rm -f *.o main
