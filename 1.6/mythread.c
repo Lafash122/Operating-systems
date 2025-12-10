@@ -1,0 +1,110 @@
+#define _GNU_SOURCE
+
+#include "mythread.h"
+
+#include <sys/syscall.h>
+#include <linux/futex.h>
+#include <sys/mman.h>
+#include <errno.h>
+#include <sched.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+static inline int futex_wait(_Atomic int *uaddr, int value) {
+    return syscall(SYS_futex, (int *) uaddr, FUTEX_WAIT, value, NULL, NULL, 0);
+}
+
+static inline int futex_wake(_Atomic int *uaddr, int value) {
+    return syscall(SYS_futex, (int *) uaddr, FUTEX_WAKE, value, NULL, NULL, 0);
+}
+
+static int mythread_routine(void *arg) {
+    mythread_t *thread = (mythread_t *) arg;
+
+    void *retval = thread->start_routine(thread->arg);
+    thread->retval = retval;
+
+    atomic_store_explicit(&thread->done, 1, memory_order_release);
+    futex_wake(&thread->done, 1);
+
+    if (atomic_load_explicit(&thread->detached, memory_order_acquire))
+        munmap(thread->stack, thread->stack_size);
+
+    return 0;
+}
+
+int mythread_create(mythread_t *thread, void *(*start_routine)(void *), void *arg) {
+    if (!thread || !start_routine)
+        return ESRCH;
+
+    thread->start_routine = start_routine;
+    thread->arg = arg;
+
+    void *stack = mmap(NULL, STACK_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0);
+    if (stack == MAP_FAILED)
+        return EAGAIN;
+
+    thread->stack_size = STACK_SIZE;
+    thread->stack = stack;
+
+    atomic_store(&thread->done, 0);
+    atomic_store(&thread->detached, 0);
+    atomic_store(&thread->joined, 0);
+
+    void *stack_head = (char *)thread->stack + thread->stack_size;
+
+    pid_t mythread_tid = clone(mythread_routine, stack_head,
+                            CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM,
+                            thread);
+
+    if (mythread_tid == -1) {
+        munmap(thread->stack, thread->stack_size);
+        return EAGAIN;
+    }
+
+    thread->tid = mythread_tid;
+
+    return 0;
+}
+
+int mythread_join(mythread_t *thread, void **retval) {
+    if (!thread)
+        return ESRCH;
+
+    int excpected = 0;
+    if (!atomic_compare_exchange_strong_explicit(&thread->joined, &excpected, 1, memory_order_acq_rel, memory_order_acquire))
+        return EINVAL;
+
+    for (;;) {
+        if(atomic_load_explicit(&thread->done, memory_order_acquire))
+            break;
+        futex_wait(&thread->done, 0);
+    }
+
+    if (retval)
+        *retval = thread->retval;
+
+    if (atomic_load_explicit(&thread->detached, memory_order_acquire))
+        return EINVAL;
+    munmap(thread->stack, thread->stack_size);
+
+    return 0;
+}
+
+int mythread_detach(mythread_t *thread) {
+    if (!thread)
+        return ESRCH;
+    
+    int excpected = 0;
+    if (!atomic_compare_exchange_strong_explicit(&thread->detached, &excpected, 1, memory_order_acq_rel, memory_order_acquire))
+        return EINVAL;
+
+    if (atomic_load_explicit(&thread->done, memory_order_acquire)) {
+        if (atomic_load_explicit(&thread->joined, memory_order_acquire))
+            return EINVAL;
+        munmap(thread->stack, thread->stack_size);
+    }
+    
+    return 0;
+}
