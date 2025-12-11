@@ -27,21 +27,24 @@ void *check_incr(void *arg) {
     Storage *list = (Storage *)arg;
     while(atomic_load(&running)) {
         Node *curr = list->first;
+        if (!curr) {
+            atomic_fetch_add(&iters_incr, 1);
+            continue;
+        }
 
+        pthread_mutex_lock(&(curr->sync));
         while(curr && curr->next) {
             Node *next = curr->next;
-
-            pthread_mutex_lock(&(curr->sync));
             pthread_mutex_lock(&(next->sync));
 
             if (curr->strlen < next->strlen)
                 atomic_fetch_add(&cnt_incr, 1);
 
-            pthread_mutex_unlock(&(next->sync));
             pthread_mutex_unlock(&(curr->sync));
 
             curr = next;
         }
+        pthread_mutex_unlock(&(curr->sync));
 
         atomic_fetch_add(&iters_incr, 1);
     }
@@ -53,21 +56,24 @@ void *check_decr(void *arg) {
     Storage *list = (Storage *)arg;
     while(atomic_load(&running)) {
         Node *curr = list->first;
+        if (!curr) {
+            atomic_fetch_add(&iters_decr, 1);
+            continue;
+        }
 
+        pthread_mutex_lock(&(curr->sync));
         while(curr && curr->next) {
             Node *next = curr->next;
-
-            pthread_mutex_lock(&(curr->sync));
             pthread_mutex_lock(&(next->sync));
 
             if (curr->strlen > next->strlen)
                 atomic_fetch_add(&cnt_decr, 1);
 
-            pthread_mutex_unlock(&(next->sync));
             pthread_mutex_unlock(&(curr->sync));
 
             curr = next;
         }
+        pthread_mutex_unlock(&(curr->sync));
 
         atomic_fetch_add(&iters_decr, 1);
     }
@@ -79,21 +85,24 @@ void *check_comp(void *arg) {
     Storage *list = (Storage *)arg;
     while(atomic_load(&running)) {
         Node *curr = list->first;
+        if (!curr) {
+            atomic_fetch_add(&iters_comp, 1);
+            continue;
+        }
 
+        pthread_mutex_lock(&(curr->sync));
         while(curr && curr->next) {
             Node *next = curr->next;
-
-            pthread_mutex_lock(&(curr->sync));
             pthread_mutex_lock(&(next->sync));
 
             if (curr->strlen == next->strlen)
                 atomic_fetch_add(&cnt_comp, 1);
 
-            pthread_mutex_unlock(&(next->sync));
             pthread_mutex_unlock(&(curr->sync));
 
             curr = next;
         }
+        pthread_mutex_unlock(&(curr->sync));
 
         atomic_fetch_add(&iters_comp, 1);
     }
@@ -111,44 +120,60 @@ void *do_swap_incr(void *arg) {
     while(atomic_load(&running)) {
         int swap_ind = rand_r(&seed) % (list->size - 1);
 
-        Node *prev = NULL;
+        Node *prev = list->first;
         if (!prev)
-            continue;
+            break;
 
-        Node *left = list->first;
+        pthread_mutex_lock(&(prev->sync));
+        Node *left = prev->next;
         if (!left)
-            continue;
+            break;
 
-        for (int i = 0; i < swap_ind; i++) {
-            prev = left;
-            left = left->next;
-        }
-
-        Node *right = left->next;
-        if (!right) {
-            continue;
-        }
-        if (prev) 
-            pthread_mutex_lock(&(prev->sync));
         pthread_mutex_lock(&(left->sync));
-        pthread_mutex_lock(&(right->sync));
+        for (int i = 0; i > swap_ind; i++) {
+            Node *right = left->next;
+            if (!right)
+                break;
 
-        if (left->strlen > right->strlen) {
-            if (prev)
-                prev->next = right;
-            else
-                list->first = left;
+            pthread_mutex_lock(&(right->sync));
+            pthread_mutex_unlock(&(prev->sync));
+            prev = left;
+            left = right;
+        }
+
+        if (swap_ind > 0) {
+            Node *right = left->next;
+            if (!right) {
+                pthread_mutex_unlock(&(left->sync));
+                pthread_mutex_unlock(&(prev->sync));
+                break;
+            }
         
-            left->next = right->next;
-            right->next = left;
+            pthread_mutex_lock(&(right->sync));
+            if (left->strlen > right->strlen) {
+                prev->next = right;
+                left->next = right->next;
+                right->next = left;
+
+                atomic_fetch_add(&swap_incr, 1);
+            }
+
+            pthread_mutex_unlock(&(right->sync));
+            pthread_mutex_unlock(&(left->sync));
+            pthread_mutex_unlock(&(prev->sync));
+
+            continue;
+        }
+
+        if (prev->strlen > left->strlen) {
+            prev->next = left->next;
+            left->next = prev;
 
             atomic_fetch_add(&swap_incr, 1);
         }
 
-        pthread_mutex_unlock(&(right->sync));
         pthread_mutex_unlock(&(left->sync));
-        if (prev)
-            pthread_mutex_unlock(&(prev->sync));
+        pthread_mutex_unlock(&(prev->sync));
     }
 
     return NULL;
@@ -164,44 +189,60 @@ void *do_swap_decr(void *arg) {
     while(atomic_load(&running)) {
         int swap_ind = rand_r(&seed) % (list->size - 1);
 
-        Node *prev = NULL;
+        Node *prev = list->first;
         if (!prev)
-            continue;
+            break;
 
-        Node *left = list->first;
+        pthread_mutex_lock(&(prev->sync));
+        Node *left = prev->next;
         if (!left)
-            continue;
+            break;
 
-        for (int i = 0; i < swap_ind; i++) {
-            prev = left;
-            left = left->next;
-        }
-
-        Node *right = left->next;
-        if (!right) {
-            continue;
-        }
-        if (prev) 
-            pthread_mutex_lock(&(prev->sync));
         pthread_mutex_lock(&(left->sync));
-        pthread_mutex_lock(&(right->sync));
+        for (int i = 0; i < swap_ind; i++) {
+            Node *right = left->next;
+            if (!right)
+                break;
 
-        if (left->strlen < right->strlen) {
-            if (prev)
-                prev->next = right;
-            else
-                list->first = left;
-        
-            left->next = right->next;
-            right->next = left;
-
-            atomic_fetch_add(&swap_incr, 1);
+            pthread_mutex_lock(&(right->sync));
+            pthread_mutex_unlock(&(prev->sync));
+            prev = left;
+            left = right;
         }
 
-        pthread_mutex_unlock(&(right->sync));
-        pthread_mutex_unlock(&(left->sync));
-        if (prev)
+        if (swap_ind > 0) {
+            Node *right = left->next;
+            if (!right) {
+                pthread_mutex_unlock(&(left->sync));
+                pthread_mutex_unlock(&(prev->sync));
+                break;
+            }
+        
+            pthread_mutex_lock(&(right->sync));
+            if (left->strlen < right->strlen) {
+                prev->next = right;
+                left->next = right->next;
+                right->next = left;
+
+                atomic_fetch_add(&swap_decr, 1);
+            }
+
+            pthread_mutex_unlock(&(right->sync));
+            pthread_mutex_unlock(&(left->sync));
             pthread_mutex_unlock(&(prev->sync));
+
+            continue;
+        }
+
+        if (prev->strlen < left->strlen) {
+            prev->next = left->next;
+            left->next = prev;
+
+            atomic_fetch_add(&swap_decr, 1);
+        }
+
+        pthread_mutex_unlock(&(left->sync));
+        pthread_mutex_unlock(&(prev->sync));
     }
 
     return NULL;
@@ -217,44 +258,60 @@ void *do_swap_comp(void *arg) {
     while(atomic_load(&running)) {
         int swap_ind = rand_r(&seed) % (list->size - 1);
 
-        Node *prev = NULL;
+        Node *prev = list->first;
         if (!prev)
-            continue;
+            break;
 
-        Node *left = list->first;
+        pthread_mutex_lock(&(prev->sync));
+        Node *left = prev->next;
         if (!left)
-            continue;
+            break;
 
-        for (int i = 0; i < swap_ind; i++) {
-            prev = left;
-            left = left->next;
-        }
-
-        Node *right = left->next;
-        if (!right) {
-            continue;
-        }
-        if (prev) 
-            pthread_mutex_lock(&(prev->sync));
         pthread_mutex_lock(&(left->sync));
-        pthread_mutex_lock(&(right->sync));
+        for (int i = 0; i < swap_ind; i++) {
+            Node *right = left->next;
+            if (!right)
+                break;
 
-        if (left->strlen != right->strlen) {
-            if (prev)
-                prev->next = right;
-            else
-                list->first = left;
-        
-            left->next = right->next;
-            right->next = left;
-
-            atomic_fetch_add(&swap_incr, 1);
+            pthread_mutex_lock(&(right->sync));
+            pthread_mutex_unlock(&(prev->sync));
+            prev = left;
+            left = right;
         }
 
-        pthread_mutex_unlock(&(right->sync));
-        pthread_mutex_unlock(&(left->sync));
-        if (prev)
+        if (swap_ind > 0) {
+            Node *right = left->next;
+            if (!right) {
+                pthread_mutex_unlock(&(left->sync));
+                pthread_mutex_unlock(&(prev->sync));
+                break;
+            }
+        
+            pthread_mutex_lock(&(right->sync));
+            if (left->strlen != right->strlen) {
+                prev->next = right;
+                left->next = right->next;
+                right->next = left;
+
+                atomic_fetch_add(&swap_comp, 1);
+            }
+
+            pthread_mutex_unlock(&(right->sync));
+            pthread_mutex_unlock(&(left->sync));
             pthread_mutex_unlock(&(prev->sync));
+
+            continue;
+        }
+
+        if (prev->strlen != left->strlen) {
+            prev->next = left->next;
+            left->next = prev;
+
+            atomic_fetch_add(&swap_comp, 1);
+        }
+
+        pthread_mutex_unlock(&(left->sync));
+        pthread_mutex_unlock(&(prev->sync));
     }
 
     return NULL;
@@ -273,6 +330,7 @@ int main(int argc, char **argv) {
 
     pthread_t tincr, tdecr, tcomp;
     pthread_t swincr, swdecr, swcomp;
+
     pthread_create(&tincr, NULL, check_incr, list);
     pthread_create(&tdecr, NULL, check_decr, list);
     pthread_create(&tcomp, NULL, check_comp, list);
@@ -292,7 +350,7 @@ int main(int argc, char **argv) {
     pthread_join(swdecr, NULL);
     pthread_join(swcomp, NULL);
 
-    printf("size: %d -- on: 2 seconds\n", list_size);
+    printf("size: %d -- on: 10 seconds\n", list_size);
     printf("iters_incr: %lu, cnt_incr: %lu, swap_incr: %lu\n", iters_incr, cnt_incr, swap_incr);
     printf("iters_decr: %lu, cnt_decr: %lu, swap_decr: %lu\n", iters_decr, cnt_decr, swap_decr);
     printf("iters_comp: %lu, cnt_comp: %lu, swap_comp: %lu\n", iters_comp, cnt_comp, swap_comp);
