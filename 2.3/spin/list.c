@@ -23,7 +23,7 @@ Node *node_init() {
     }
 
     node->strlen = gen_rand_str(node->value, 100);
-    pthread_spin_init(&(node->sync), NULL);
+    pthread_spin_init(&(node->sync), PTHREAD_PROCESS_PRIVATE);
     node->next = NULL;
 
     return node;
