@@ -32,19 +32,19 @@ void *check_incr(void *arg) {
             continue;
         }
 
-        pthread_mutex_lock(&(curr->sync));
+        pthread_rwlock_rdlock(&(curr->sync));
         while(curr && curr->next) {
             Node *next = curr->next;
-            pthread_mutex_lock(&(next->sync));
+            pthread_rwlock_rdlock(&(next->sync));
 
             if (curr->strlen < next->strlen)
                 atomic_fetch_add(&cnt_incr, 1);
 
-            pthread_mutex_unlock(&(curr->sync));
+            pthread_rwlock_unlock(&(curr->sync));
 
             curr = next;
         }
-        pthread_mutex_unlock(&(curr->sync));
+        pthread_rwlock_unlock(&(curr->sync));
 
         atomic_fetch_add(&iters_incr, 1);
     }
@@ -61,19 +61,19 @@ void *check_decr(void *arg) {
             continue;
         }
 
-        pthread_mutex_lock(&(curr->sync));
+        pthread_rwlock_rdlock(&(curr->sync));
         while(curr && curr->next) {
             Node *next = curr->next;
-            pthread_mutex_lock(&(next->sync));
+            pthread_rwlock_rdlock(&(next->sync));
 
             if (curr->strlen > next->strlen)
                 atomic_fetch_add(&cnt_decr, 1);
 
-            pthread_mutex_unlock(&(curr->sync));
+            pthread_rwlock_unlock(&(curr->sync));
 
             curr = next;
         }
-        pthread_mutex_unlock(&(curr->sync));
+        pthread_rwlock_unlock(&(curr->sync));
 
         atomic_fetch_add(&iters_decr, 1);
     }
@@ -90,19 +90,19 @@ void *check_comp(void *arg) {
             continue;
         }
 
-        pthread_mutex_lock(&(curr->sync));
+        pthread_rwlock_rdlock(&(curr->sync));
         while(curr && curr->next) {
             Node *next = curr->next;
-            pthread_mutex_lock(&(next->sync));
+            pthread_rwlock_rdlock(&(next->sync));
 
             if (curr->strlen == next->strlen)
                 atomic_fetch_add(&cnt_comp, 1);
 
-            pthread_mutex_unlock(&(curr->sync));
+            pthread_rwlock_unlock(&(curr->sync));
 
             curr = next;
         }
-        pthread_mutex_unlock(&(curr->sync));
+        pthread_rwlock_unlock(&(curr->sync));
 
         atomic_fetch_add(&iters_comp, 1);
     }
@@ -124,21 +124,21 @@ void *do_swap_incr(void *arg) {
         if (!prev)
             break;
 
-        pthread_mutex_lock(&(prev->sync));
+        pthread_rwlock_wrlock(&(prev->sync));
         Node *left = prev->next;
         if (!left) {
-            pthread_mutex_unlock(&(prev->sync));
+            pthread_rwlock_unlock(&(prev->sync));
             break;
         }
 
-        pthread_mutex_lock(&(left->sync));
+        pthread_rwlock_wrlock(&(left->sync));
         for (int i = 0; i > swap_ind; i++) {
             Node *right = left->next;
             if (!right)
                 break;
 
-            pthread_mutex_lock(&(right->sync));
-            pthread_mutex_unlock(&(prev->sync));
+            pthread_rwlock_wrlock(&(right->sync));
+            pthread_rwlock_unlock(&(prev->sync));
             prev = left;
             left = right;
         }
@@ -146,12 +146,12 @@ void *do_swap_incr(void *arg) {
         if (swap_ind > 0) {
             Node *right = left->next;
             if (!right) {
-                pthread_mutex_unlock(&(left->sync));
-                pthread_mutex_unlock(&(prev->sync));
+                pthread_rwlock_unlock(&(left->sync));
+                pthread_rwlock_unlock(&(prev->sync));
                 break;
             }
         
-            pthread_mutex_lock(&(right->sync));
+            pthread_rwlock_wrlock(&(right->sync));
             if (left->strlen > right->strlen) {
                 prev->next = right;
                 left->next = right->next;
@@ -160,9 +160,9 @@ void *do_swap_incr(void *arg) {
                 atomic_fetch_add(&swap_incr, 1);
             }
 
-            pthread_mutex_unlock(&(right->sync));
-            pthread_mutex_unlock(&(left->sync));
-            pthread_mutex_unlock(&(prev->sync));
+            pthread_rwlock_unlock(&(right->sync));
+            pthread_rwlock_unlock(&(left->sync));
+            pthread_rwlock_unlock(&(prev->sync));
 
             continue;
         }
@@ -174,8 +174,8 @@ void *do_swap_incr(void *arg) {
             atomic_fetch_add(&swap_incr, 1);
         }
 
-        pthread_mutex_unlock(&(left->sync));
-        pthread_mutex_unlock(&(prev->sync));
+        pthread_rwlock_unlock(&(left->sync));
+        pthread_rwlock_unlock(&(prev->sync));
     }
 
     return NULL;
@@ -195,21 +195,21 @@ void *do_swap_decr(void *arg) {
         if (!prev)
             break;
 
-        pthread_mutex_lock(&(prev->sync));
+        pthread_rwlock_wrlock(&(prev->sync));
         Node *left = prev->next;
         if (!left) {
-            pthread_mutex_unlock(&(prev->sync));
+            pthread_rwlock_unlock(&(prev->sync));
             break;
         }
 
-        pthread_mutex_lock(&(left->sync));
+        pthread_rwlock_rwlock(&(left->sync));
         for (int i = 0; i < swap_ind; i++) {
             Node *right = left->next;
             if (!right)
                 break;
 
-            pthread_mutex_lock(&(right->sync));
-            pthread_mutex_unlock(&(prev->sync));
+            pthread_rwlock_wrlock(&(right->sync));
+            pthread_rwlock_unlock(&(prev->sync));
             prev = left;
             left = right;
         }
@@ -217,12 +217,12 @@ void *do_swap_decr(void *arg) {
         if (swap_ind > 0) {
             Node *right = left->next;
             if (!right) {
-                pthread_mutex_unlock(&(left->sync));
-                pthread_mutex_unlock(&(prev->sync));
+                pthread_rwlock_unlock(&(left->sync));
+                pthread_rwlock_unlock(&(prev->sync));
                 break;
             }
         
-            pthread_mutex_lock(&(right->sync));
+            pthread_rwlock_wrlock(&(right->sync));
             if (left->strlen < right->strlen) {
                 prev->next = right;
                 left->next = right->next;
@@ -231,9 +231,9 @@ void *do_swap_decr(void *arg) {
                 atomic_fetch_add(&swap_decr, 1);
             }
 
-            pthread_mutex_unlock(&(right->sync));
-            pthread_mutex_unlock(&(left->sync));
-            pthread_mutex_unlock(&(prev->sync));
+            pthread_rwlock_unlock(&(right->sync));
+            pthread_rwlock_unlock(&(left->sync));
+            pthread_rwlock_unlock(&(prev->sync));
 
             continue;
         }
@@ -245,8 +245,8 @@ void *do_swap_decr(void *arg) {
             atomic_fetch_add(&swap_decr, 1);
         }
 
-        pthread_mutex_unlock(&(left->sync));
-        pthread_mutex_unlock(&(prev->sync));
+        pthread_rwlock_unlock(&(left->sync));
+        pthread_rwlock_unlock(&(prev->sync));
     }
 
     return NULL;
@@ -266,21 +266,21 @@ void *do_swap_comp(void *arg) {
         if (!prev)
             break;
 
-        pthread_mutex_lock(&(prev->sync));
+        pthread_rwlock_wrlock(&(prev->sync));
         Node *left = prev->next;
         if (!left) {
-            pthread_mutex_unlock(&(prev->sync));
+            pthread_rwlock_unlock(&(prev->sync));
             break;
         }
 
-        pthread_mutex_lock(&(left->sync));
+        pthread_rwlock_wrlock(&(left->sync));
         for (int i = 0; i < swap_ind; i++) {
             Node *right = left->next;
             if (!right)
                 break;
 
-            pthread_mutex_lock(&(right->sync));
-            pthread_mutex_unlock(&(prev->sync));
+            pthread_rwlock_wrlock(&(right->sync));
+            pthread_rwlock_unlock(&(prev->sync));
             prev = left;
             left = right;
         }
@@ -288,12 +288,12 @@ void *do_swap_comp(void *arg) {
         if (swap_ind > 0) {
             Node *right = left->next;
             if (!right) {
-                pthread_mutex_unlock(&(left->sync));
-                pthread_mutex_unlock(&(prev->sync));
+                pthread_rwlock_unlock(&(left->sync));
+                pthread_rwlock_unlock(&(prev->sync));
                 break;
             }
         
-            pthread_mutex_lock(&(right->sync));
+            pthread_rwlock_wrlock(&(right->sync));
             if (left->strlen != right->strlen) {
                 prev->next = right;
                 left->next = right->next;
@@ -302,9 +302,9 @@ void *do_swap_comp(void *arg) {
                 atomic_fetch_add(&swap_comp, 1);
             }
 
-            pthread_mutex_unlock(&(right->sync));
-            pthread_mutex_unlock(&(left->sync));
-            pthread_mutex_unlock(&(prev->sync));
+            pthread_rwlock_unlock(&(right->sync));
+            pthread_rwlock_unlock(&(left->sync));
+            pthread_rwlock_unlock(&(prev->sync));
 
             continue;
         }
@@ -316,8 +316,8 @@ void *do_swap_comp(void *arg) {
             atomic_fetch_add(&swap_comp, 1);
         }
 
-        pthread_mutex_unlock(&(left->sync));
-        pthread_mutex_unlock(&(prev->sync));
+        pthread_rwlock_unlock(&(left->sync));
+        pthread_rwlock_unlock(&(prev->sync));
     }
 
     return NULL;
@@ -356,7 +356,7 @@ int main(int argc, char **argv) {
     pthread_join(swdecr, NULL);
     pthread_join(swcomp, NULL);
 
-    printf("Mutex size: %d -- on: 10 seconds\n", list_size);
+    printf("Rwlock size: %d -- on: 10 seconds\n", list_size);
     printf("iters_incr: %lu, cnt_incr: %lu, swap_incr: %lu\n", iters_incr, cnt_incr, swap_incr);
     printf("iters_decr: %lu, cnt_decr: %lu, swap_decr: %lu\n", iters_decr, cnt_decr, swap_decr);
     printf("iters_comp: %lu, cnt_comp: %lu, swap_comp: %lu\n", iters_comp, cnt_comp, swap_comp);
