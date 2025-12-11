@@ -64,9 +64,9 @@ iters_comp: 2083, cnt_comp: 2107711, swap_comp: 6685
 - размер 100:
 ```bash
 Rwlock size: 100 -- on: 10 seconds
-iters_incr: 794573, cnt_incr: 45290254, swap_incr: 19
-iters_decr: 824635, cnt_decr: 33810578, swap_decr: 10
-iters_comp: 1663947, cnt_comp: 0, swap_comp: 27
+iters_incr: 1019761, cnt_incr: 62204115, swap_incr: 79
+iters_decr: 1025212, cnt_decr: 36908899, swap_decr: 43
+iters_comp: 1848064, cnt_comp: 3696096, swap_comp: 69
 ```
 - размер 1000:
 ```bash
