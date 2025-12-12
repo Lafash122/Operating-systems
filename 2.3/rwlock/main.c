@@ -132,7 +132,7 @@ void *do_swap_incr(void *arg) {
         }
 
         pthread_rwlock_wrlock(&(left->sync));
-        for (int i = 0; i > swap_ind; i++) {
+        for (int i = 0; i < swap_ind; i++) {
             Node *right = left->next;
             if (!right)
                 break;
