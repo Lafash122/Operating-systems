@@ -9,6 +9,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#define CHECKING
+
 atomic_int running = 1;
 
 atomic_ulong iters_incr = 0;
@@ -25,6 +27,11 @@ atomic_ulong swap_comp = 0;
 
 void *check_incr(void *arg) {
     Storage *list = (Storage *)arg;
+
+    #ifdef CHECKING
+    int frst_check = 1;
+    #endif
+
     while(atomic_load(&running)) {
         Node *curr = list->first;
         if (!curr) {
@@ -32,9 +39,19 @@ void *check_incr(void *arg) {
             continue;
         }
 
+        #ifdef CHECKING
+        usleep(100000);
+        int checked = 0;
+        #endif
+
         pthread_spin_lock(&(curr->sync));
         while(curr && curr->next) {
             Node *next = curr->next;
+
+            #ifdef CHECKING
+            usleep(10000);
+            #endif
+
             pthread_spin_lock(&(next->sync));
 
             if (curr->strlen < next->strlen)
@@ -43,10 +60,21 @@ void *check_incr(void *arg) {
             pthread_spin_unlock(&(curr->sync));
 
             curr = next;
+
+            #ifdef CHECKING
+            checked++;
+            #endif
         }
         pthread_spin_unlock(&(curr->sync));
 
         atomic_fetch_add(&iters_incr, 1);
+
+        #ifdef CHECKING
+        if ((checked < list->size - 1) & frst_check) {
+            printf("INCR: Checked nodes: %d, but needed to check: %d. Bug on %lu iteration\n", checked, list->size - 1, iters_incr);
+            frst_check = 0;
+        }
+        #endif
     }
 
     return NULL;
@@ -54,6 +82,11 @@ void *check_incr(void *arg) {
 
 void *check_decr(void *arg) {
     Storage *list = (Storage *)arg;
+
+    #ifdef CHECKING
+    int frst_check = 1;
+    #endif
+
     while(atomic_load(&running)) {
         Node *curr = list->first;
         if (!curr) {
@@ -61,9 +94,19 @@ void *check_decr(void *arg) {
             continue;
         }
 
+        #ifdef CHECKING
+        usleep(100000);
+        int checked = 0;
+        #endif
+
         pthread_spin_lock(&(curr->sync));
         while(curr && curr->next) {
             Node *next = curr->next;
+
+            #ifdef CHECKING
+            usleep(10000);
+            #endif
+
             pthread_spin_lock(&(next->sync));
 
             if (curr->strlen > next->strlen)
@@ -72,10 +115,21 @@ void *check_decr(void *arg) {
             pthread_spin_unlock(&(curr->sync));
 
             curr = next;
+
+            #ifdef CHECKING
+            checked++;
+            #endif
         }
         pthread_spin_unlock(&(curr->sync));
 
         atomic_fetch_add(&iters_decr, 1);
+
+        #ifdef CHECKING
+        if ((checked < list->size - 1) & frst_check) {
+            printf("DECR: Checked nodes: %d, but needed to check: %d. Bug on %lu iteration\n", checked, list->size - 1, iters_decr);
+            frst_check = 0;
+        }
+        #endif
     }
 
     return NULL;
@@ -83,6 +137,11 @@ void *check_decr(void *arg) {
 
 void *check_comp(void *arg) {
     Storage *list = (Storage *)arg;
+
+    #ifdef CHECKING
+    int frst_check = 1;
+    #endif
+
     while(atomic_load(&running)) {
         Node *curr = list->first;
         if (!curr) {
@@ -90,9 +149,19 @@ void *check_comp(void *arg) {
             continue;
         }
 
+        #ifdef CHECKING
+        usleep(100000);
+        int checked = 0;
+        #endif
+
         pthread_spin_lock(&(curr->sync));
         while(curr && curr->next) {
             Node *next = curr->next;
+
+            #ifdef CHECKING
+            usleep(10000);
+            #endif
+
             pthread_spin_lock(&(next->sync));
 
             if (curr->strlen == next->strlen)
@@ -101,10 +170,21 @@ void *check_comp(void *arg) {
             pthread_spin_unlock(&(curr->sync));
 
             curr = next;
+
+            #ifdef CHECKING
+            checked++;
+            #endif
         }
         pthread_spin_unlock(&(curr->sync));
 
         atomic_fetch_add(&iters_comp, 1);
+
+        #ifdef CHECKING
+        if ((checked < list->size - 1) & frst_check) {
+            printf("COMP: Checked nodes: %d, but needed to check: %d. Bug on %lu iteration\n", checked, list->size - 1, iters_comp);
+            frst_check = 0;
+        }
+        #endif
     }
 
     return NULL;
