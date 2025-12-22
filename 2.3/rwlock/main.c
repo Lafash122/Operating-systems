@@ -9,7 +9,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#define CHECKING
+//#define CHECKING
+#define SWAPPING
 
 atomic_int running = 1;
 
@@ -197,8 +198,19 @@ void *do_swap_incr(void *arg) {
 
     unsigned int seed = (unsigned int)pthread_self() ^ (unsigned int)time(NULL);
 
+    #ifdef SWAPPING
+    int first_swap = 1;
+    #endif
+
     while(atomic_load(&running)) {
         int swap_ind = rand_r(&seed) % (list->size - 1);
+
+        #ifdef SWAPPING
+        if (first_swap)
+            swap_ind = 0;
+        else
+            swap_ind = 10;
+        #endif
 
         Node *prev = list->first;
         if (!prev)
@@ -247,12 +259,27 @@ void *do_swap_incr(void *arg) {
             continue;
         }
 
+        #ifndef SWAPPING
         if (prev->strlen > left->strlen) {
+        #endif
+
+            #ifdef SWAPPING
+            printf("BEFORE: First el addr: %p, Second el addr: %p, Saved list->first addr: %p\n", (void*)prev, (void*)left, (void*)list->first);
+            #endif
+
             prev->next = left->next;
             left->next = prev;
 
+            #ifdef SWAPPING
+            printf("AFTER: First el addr: %p, Second el addr: %p, Saved list->first addr: %p\n", (void*)left, (void*)prev, (void*)list->first);
+            first_swap = 0;
+            #endif
+
             atomic_fetch_add(&swap_incr, 1);
+
+        #ifndef SWAPPING
         }
+        #endif
 
         pthread_rwlock_unlock(&(left->sync));
         pthread_rwlock_unlock(&(prev->sync));
@@ -268,8 +295,16 @@ void *do_swap_decr(void *arg) {
 
     unsigned int seed = (unsigned int)pthread_self() ^ (unsigned int)time(NULL);
 
+    #ifdef SWAPPING
+    sleep(1);
+    #endif
+
     while(atomic_load(&running)) {
         int swap_ind = rand_r(&seed) % (list->size - 1);
+
+        #ifdef SWAPPING
+        swap_ind = list->size - 2;
+        #endif
 
         Node *prev = list->first;
         if (!prev)
@@ -285,8 +320,13 @@ void *do_swap_decr(void *arg) {
         pthread_rwlock_wrlock(&(left->sync));
         for (int i = 0; i < swap_ind; i++) {
             Node *right = left->next;
-            if (!right)
+            if (!right) {
+                #ifdef SWAPPING
+                printf("Stop on %d but needed on %d\n", i, swap_ind);
+                #endif
+
                 break;
+            }
 
             pthread_rwlock_wrlock(&(right->sync));
             pthread_rwlock_unlock(&(prev->sync));
@@ -341,6 +381,10 @@ void *do_swap_comp(void *arg) {
 
     while(atomic_load(&running)) {
         int swap_ind = rand_r(&seed) % (list->size - 1);
+
+        #ifdef SWAPPING
+        swap_ind = 20;
+        #endif
 
         Node *prev = list->first;
         if (!prev)
