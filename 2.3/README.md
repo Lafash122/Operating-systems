@@ -4,97 +4,93 @@
 - размер 100:
 ```bash
 Mutex size: 100 -- on: 10 seconds
-iters_incr: 1024164, cnt_incr: 44039461, swap_incr: 26
-iters_decr: 1021129, cnt_decr: 54119579, swap_decr: 46
-iters_comp: 1026975, cnt_comp: 1026955, swap_comp: 41
+iters_incr: 467438, cnt_incr: 22723177, swap_incr: 277697
+iters_decr: 465018, cnt_decr: 22725464, swap_decr: 278531
+iters_comp: 477184, cnt_comp: 658988, swap_comp: 560535
 ```
 - размер 1000:
 ```bash
 Mutex size: 1000 -- on: 10 seconds
-iters_incr: 150758, cnt_incr: 75377159, swap_incr: 160
-iters_decr: 150756, cnt_decr: 73571577, swap_decr: 122
-iters_comp: 150746, cnt_comp: 1356129, swap_comp: 566
+iters_incr: 108801, cnt_incr: 53850139, swap_incr: 145602
+iters_decr: 108648, cnt_decr: 53771707, swap_decr: 144541
+iters_comp: 108970, cnt_comp: 995878, swap_comp: 289402
 ```
 - размер 10000:
 ```bash
 Mutex size: 10000 -- on: 10 seconds
-iters_incr: 14374, cnt_incr: 73908490, swap_incr: 3815
-iters_decr: 14373, cnt_decr: 68477805, swap_decr: 2926
-iters_comp: 14373, cnt_comp: 1309404, swap_comp: 6827
+iters_incr: 12363, cnt_incr: 61076713, swap_incr: 17808
+iters_decr: 12363, cnt_decr: 61224964, swap_decr: 17556
+iters_comp: 12362, cnt_comp: 1315908, swap_comp: 35722
 ```
 - размер 100000:
 ```bash
 Mutex size: 100000 -- on: 10 seconds
-iters_incr: 1213, cnt_incr: 60131139, swap_incr: 1750
-iters_decr: 1212, cnt_decr: 59825031, swap_decr: 1748
-iters_comp: 1212, cnt_comp: 1292189, swap_comp: 3513
+iters_incr: 1294, cnt_incr: 64049283, swap_incr: 1799
+iters_decr: 1294, cnt_decr: 64030734, swap_decr: 1870
+iters_comp: 1295, cnt_comp: 1319743, swap_comp: 3739
 ```
 
 ### Спинлок
 - размер 100:
 ```bash
 Spinlock size: 100 -- on: 10 seconds
-iters_incr: 2056267, cnt_incr: 59634537, swap_incr: 19
-iters_decr: 2056696, cnt_decr: 137796664, swap_decr: 159
-iters_comp: 2051202, cnt_comp: 6153405, swap_comp: 31
+iters_incr: 1938486, cnt_incr: 94640750, swap_incr: 2209274
+iters_decr: 1935072, cnt_decr: 94724433, swap_decr: 2216601
+iters_comp: 1967620, cnt_comp: 2363863, swap_comp: 4351722
 ```
 - размер 1000:
 ```bash
 Spinlock size: 1000 -- on: 10 seconds
-iters_incr: 381240, cnt_incr: 178425608, swap_incr: 160
-iters_decr: 381195, cnt_decr: 198216207, swap_decr: 323
-iters_comp: 381064, cnt_comp: 3429656, swap_comp: 538
+iters_incr: 233958, cnt_incr: 116018338, swap_incr: 379653
+iters_decr: 232641, cnt_decr: 114803756, swap_decr: 368492
+iters_comp: 237393, cnt_comp: 2285809, swap_comp: 732681
 ```
 - размер 10000:
 ```bash
 Spinlock size: 10000 -- on: 10 seconds
-iters_incr: 34707, cnt_incr: 174399020, swap_incr: 4095
-iters_decr: 34714, cnt_decr: 169323713, swap_decr: 3778
-iters_comp: 34769, cnt_comp: 3352727, swap_comp: 9461
+iters_incr: 20391, cnt_incr: 101391739, swap_incr: 39331
+iters_decr: 20396, cnt_decr: 100421083, swap_decr: 36499
+iters_comp: 20428, cnt_comp: 2105441, swap_comp: 73565
 ```
 - размер 100000:
 ```bash
 Spinlock size: 100000 -- on: 10 seconds
-iters_incr: 1986, cnt_incr: 98071520, swap_incr: 3292
-iters_decr: 1996, cnt_decr: 99012842, swap_decr: 3370
-iters_comp: 2083, cnt_comp: 2107711, swap_comp: 6685
+iters_incr: 2583, cnt_incr: 127296069, swap_incr: 3650
+iters_decr: 2587, cnt_decr: 128610696, swap_decr: 3976
+iters_comp: 2643, cnt_comp: 2649871, swap_comp: 7159
 ```
 
 ### RWlock
 - размер 100:
 ```bash
 Rwlock size: 100 -- on: 10 seconds
-iters_incr: 1019761, cnt_incr: 62204115, swap_incr: 79
-iters_decr: 1025212, cnt_decr: 36908899, swap_decr: 43
-iters_comp: 1848064, cnt_comp: 3696096, swap_comp: 69
+iters_incr: 538860, cnt_incr: 26361811, swap_incr: 279990
+iters_decr: 538771, cnt_decr: 26422574, swap_decr: 279357
+iters_comp: 563687, cnt_comp: 582435, swap_comp: 556915
 ```
 - размер 1000:
 ```bash
 Rwlock size: 1000 -- on: 10 seconds
-iters_incr: 186413, cnt_incr: 102331566, swap_incr: 408
-iters_decr: 191414, cnt_decr: 83276112, swap_decr: 132
-iters_comp: 404214, cnt_comp: 4445159, swap_comp: 489
+iters_incr: 105682, cnt_incr: 52142748, swap_incr: 114210
+iters_decr: 105246, cnt_decr: 52130253, swap_decr: 115524
+iters_comp: 110941, cnt_comp: 1141498, swap_comp: 227270
 ```
 - размер 10000:
 ```bash
 Rwlock size: 10000 -- on: 10 seconds
-iters_incr: 20395, cnt_incr: 106371655, swap_incr: 5049
-iters_decr: 20804, cnt_decr: 97750237, swap_decr: 3036
-iters_comp: 36081, cnt_comp: 2936287, swap_comp: 8915
+iters_incr: 14794, cnt_incr: 73096510, swap_incr: 15462
+iters_decr: 15085, cnt_decr: 74634562, swap_decr: 15406
+iters_comp: 15950, cnt_comp: 1737703, swap_comp: 31817
 ```
 - размер 100000:
 ```bash
 Rwlock size: 100000 -- on: 10 seconds
-iters_incr: 1156, cnt_incr: 57255573, swap_incr: 1630
-iters_decr: 1164, cnt_decr: 57573793, swap_decr: 1556
-iters_comp: 1296, cnt_comp: 1307085, swap_comp: 3169
+iters_incr: 1194, cnt_incr: 59260034, swap_incr: 1429
+iters_decr: 1195, cnt_decr: 58963216, swap_decr: 1432
+iters_comp: 1338, cnt_comp: 1372544, swap_comp: 2789
 ```
 
 ## Отличия и объяснения
-У мьютекса и спинлока переменные счетчиков итераций цикла проверок пар одинаковы, однако у rwlock-а счетчик итераций равенства длин на очередях размера 100 и 1000 в 2 раза больше, чем счетчики итераций возрастания и убывания длин. На очередях размером 10000 такой же счетчик в 1,5 раза больше, а на очереди 100000 примерно такой же. Это объясняется тем, что rwlock чекеры могут читать одновременно в отличие от мьютексов и спинлоков, и проверки на `==` реже меньше блокируются в отличие от остальных.
-
-Чем больше очередь, тем больше заметно увеличение числа перестановок в два раза для потока, выполняющего проверку `!=`, по стравнению со счетчиками перестановок потоков, выполняющих проверки `<` и `>`. Так происходит, потому что операция `!=` является либо `<`, либо `>`, и операции меньше и больше равновероятны.
-
 Так же видно, что количество перестановок растет до размера очереди 10000, а на очереди размера 100000 количество перестановок уже меньше, так как потоку перестановщику дольше идти до места предполагаемой перестановки. Именно поэтому с ростом размера очереди уменьшается и число итераций циклов проверок.
 
 Так же можно заметить, что быстрее всех оказался спинлок, так как секция блокировки спинлоком у нас короткая: либо проверка на длину строк, либо перестновка элементов списка. Мьютекс оказался самым медленным, поскольку при недоступности блокировки/разблокировки мьютекса, он будеть уходить в сон через futex, переключая контекст, когда спинлок будет просто крутиться в цикле в user-space. rwlock же оказался на маленькой и большой очереди схож по скорости с мьютексом, а на средних даже быстрее. Сам rwlock эффективен, когда читателей большей, чем писателей - у нас же и тех, и других одинаковое количество. rwlock также устроен иначе в отличие от других используемых примитивов: несколько читателей могут читать область незаблокированную писателем. На маленькой очереди rwlock и мьютекс примерно одинаковы по скорости, потому что мы часто попадаем на заблокированные области. На средних очередях rwlock обгоняет мьютекс за счет бонуса с читателями. На большой очереди примитивы опять имеют схожую скорость, так как блокировки/разблокировки rwlock-а медленее чем у мьютекса.
