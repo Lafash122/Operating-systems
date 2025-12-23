@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 //#define CHECKING
-#define SWAPPING
+//#define SWAPPING
 
 atomic_int running = 1;
 
@@ -28,15 +28,25 @@ atomic_ulong swap_comp = 0;
 
 void *check_incr(void *arg) {
     Storage *list = (Storage *)arg;
+    if (list->size < 2)
+        return NULL;
 
     #ifdef CHECKING
     int frst_check = 1;
     #endif
 
     while(atomic_load(&running)) {
-        Node *curr = list->first;
+        Node *head = list->first;
+        if (!head) {
+            atomic_fetch_add(&iters_incr, 1);
+            continue;
+        }
+
+        pthread_spin_lock(&(head->sync));
+        Node *curr = head->next;
         if (!curr) {
             atomic_fetch_add(&iters_incr, 1);
+            pthread_spin_unlock(&(head->sync));
             continue;
         }
 
@@ -46,6 +56,7 @@ void *check_incr(void *arg) {
         #endif
 
         pthread_spin_lock(&(curr->sync));
+        pthread_spin_unlock(&(head->sync));
         while(curr && curr->next) {
             Node *next = curr->next;
 
@@ -83,15 +94,25 @@ void *check_incr(void *arg) {
 
 void *check_decr(void *arg) {
     Storage *list = (Storage *)arg;
+    if (list->size < 2)
+        return NULL;
 
     #ifdef CHECKING
     int frst_check = 1;
     #endif
 
     while(atomic_load(&running)) {
-        Node *curr = list->first;
+        Node *head = list->first;
+        if (!head) {
+            atomic_fetch_add(&iters_decr, 1);
+            continue;
+        }
+
+        pthread_spin_lock(&(head->sync));
+        Node *curr = head->next;
         if (!curr) {
             atomic_fetch_add(&iters_decr, 1);
+            pthread_spin_unlock(&(head->sync));
             continue;
         }
 
@@ -101,6 +122,7 @@ void *check_decr(void *arg) {
         #endif
 
         pthread_spin_lock(&(curr->sync));
+        pthread_spin_unlock(&(head->sync));
         while(curr && curr->next) {
             Node *next = curr->next;
 
@@ -138,15 +160,25 @@ void *check_decr(void *arg) {
 
 void *check_comp(void *arg) {
     Storage *list = (Storage *)arg;
+    if (list->size < 2)
+        return NULL;
 
     #ifdef CHECKING
     int frst_check = 1;
     #endif
 
     while(atomic_load(&running)) {
-        Node *curr = list->first;
+        Node *head = list->first;
+        if (!head) {
+            atomic_fetch_add(&iters_comp, 1);
+            continue;
+        }
+
+        pthread_spin_lock(&(head->sync));
+        Node *curr = head->next;
         if (!curr) {
             atomic_fetch_add(&iters_comp, 1);
+            pthread_spin_unlock(&(head->sync));
             continue;
         }
 
@@ -156,6 +188,7 @@ void *check_comp(void *arg) {
         #endif
 
         pthread_spin_lock(&(curr->sync));
+        pthread_spin_unlock(&(head->sync));
         while(curr && curr->next) {
             Node *next = curr->next;
 
@@ -235,52 +268,23 @@ void *do_swap_incr(void *arg) {
             left = right;
         }
 
-        if (swap_ind > 0) {
-            Node *right = left->next;
-            if (!right) {
-                pthread_spin_unlock(&(left->sync));
-                pthread_spin_unlock(&(prev->sync));
-                break;
-            }
-        
-            pthread_spin_lock(&(right->sync));
-            if (left->strlen > right->strlen) {
-                prev->next = right;
-                left->next = right->next;
-                right->next = left;
-
-                atomic_fetch_add(&swap_incr, 1);
-            }
-
-            pthread_spin_unlock(&(right->sync));
+        Node *right = left->next;
+        if (!right) {
             pthread_spin_unlock(&(left->sync));
             pthread_spin_unlock(&(prev->sync));
-
-            continue;
+            break;
         }
-
-        #ifndef SWAPPING
-        if (prev->strlen > left->strlen) {
-        #endif
-
-            #ifdef SWAPPING
-            printf("BEFORE: First el addr: %p, Second el addr: %p, Saved list->first addr: %p\n", (void*)prev, (void*)left, (void*)list->first);
-            #endif
-
-            prev->next = left->next;
-            left->next = prev;
-
-            #ifdef SWAPPING
-            printf("AFTER: First el addr: %p, Second el addr: %p, Saved list->first addr: %p\n", (void*)left, (void*)prev, (void*)list->first);
-            first_swap = 0;
-            #endif
+        
+        pthread_spin_lock(&(right->sync));
+        if (left->strlen > right->strlen) {
+            prev->next = right;
+            left->next = right->next;
+            right->next = left;
 
             atomic_fetch_add(&swap_incr, 1);
-
-        #ifndef SWAPPING
         }
-        #endif
 
+        pthread_spin_unlock(&(right->sync));
         pthread_spin_unlock(&(left->sync));
         pthread_spin_unlock(&(prev->sync));
     }
@@ -334,37 +338,23 @@ void *do_swap_decr(void *arg) {
             left = right;
         }
 
-        if (swap_ind > 0) {
-            Node *right = left->next;
-            if (!right) {
-                pthread_spin_unlock(&(left->sync));
-                pthread_spin_unlock(&(prev->sync));
-                break;
-            }
-        
-            pthread_spin_lock(&(right->sync));
-            if (left->strlen < right->strlen) {
-                prev->next = right;
-                left->next = right->next;
-                right->next = left;
-
-                atomic_fetch_add(&swap_decr, 1);
-            }
-
-            pthread_spin_unlock(&(right->sync));
+        Node *right = left->next;
+        if (!right) {
             pthread_spin_unlock(&(left->sync));
             pthread_spin_unlock(&(prev->sync));
-
-            continue;
+            break;
         }
-
-        if (prev->strlen < left->strlen) {
-            prev->next = left->next;
-            left->next = prev;
+        
+        pthread_spin_lock(&(right->sync));
+        if (left->strlen < right->strlen) {
+            prev->next = right;
+            left->next = right->next;
+            right->next = left;
 
             atomic_fetch_add(&swap_decr, 1);
         }
 
+        pthread_spin_unlock(&(right->sync));
         pthread_spin_unlock(&(left->sync));
         pthread_spin_unlock(&(prev->sync));
     }
@@ -409,37 +399,23 @@ void *do_swap_comp(void *arg) {
             left = right;
         }
 
-        if (swap_ind > 0) {
-            Node *right = left->next;
-            if (!right) {
-                pthread_spin_unlock(&(left->sync));
-                pthread_spin_unlock(&(prev->sync));
-                break;
-            }
-        
-            pthread_spin_lock(&(right->sync));
-            if (left->strlen != right->strlen) {
-                prev->next = right;
-                left->next = right->next;
-                right->next = left;
-
-                atomic_fetch_add(&swap_comp, 1);
-            }
-
-            pthread_spin_unlock(&(right->sync));
+        Node *right = left->next;
+        if (!right) {
             pthread_spin_unlock(&(left->sync));
             pthread_spin_unlock(&(prev->sync));
-
-            continue;
+            break;
         }
-
-        if (prev->strlen != left->strlen) {
-            prev->next = left->next;
-            left->next = prev;
+        
+        pthread_spin_lock(&(right->sync));
+        if (left->strlen != right->strlen) {
+            prev->next = right;
+            left->next = right->next;
+            right->next = left;
 
             atomic_fetch_add(&swap_comp, 1);
         }
 
+        pthread_spin_unlock(&(right->sync));
         pthread_spin_unlock(&(left->sync));
         pthread_spin_unlock(&(prev->sync));
     }

@@ -29,6 +29,21 @@ Node *node_init() {
     return node;
 }
 
+Node *first_init() {
+    Node *node = (Node *)malloc(sizeof(Node));
+    if (!node) {
+        printf("Cannot allocate memory for node of the list\n");
+        abort();
+    }
+
+    node->value[0] = '\0';
+    node->strlen = 0;
+    pthread_spin_init(&(node->sync), PTHREAD_PROCESS_PRIVATE);
+    node->next = NULL;
+
+    return node;
+}
+
 Storage *list_init(int size) {
     Storage *list = (Storage *)malloc(sizeof(Storage));
     if (!list) {
@@ -36,11 +51,11 @@ Storage *list_init(int size) {
         abort();
     }
 
-    list->first = node_init();
+    list->first = first_init();
     list->size = size;
 
     Node *curr = list->first;
-    for (int i = 1; i < size; i++) {
+    for (int i = 0; i < size; i++) {
         curr->next = node_init();
         curr = curr->next;
     }
