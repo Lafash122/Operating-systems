@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #define PROXY_PORT 80
+#define CONN_Q_SIZE 256
 
 int main (int argc, char** argv) {
     int cli_list_sock;
@@ -28,6 +29,20 @@ int main (int argc, char** argv) {
         close(cli_list_sock);
         return 1;
     }
+
+    if (bind(cli_list_sock, (const struct sockaddr *)&listen_addr, sizeof(listen_addr)) < 0) {
+        perror("Cannot bind socket");
+        close(cli_list_sock);
+        return 1;
+    }
+
+    if (listen(cli_list_sock, CONN_Q_SIZE) < 0) {
+        perror("Cannot set listenning on socket");
+        close(cli_list_sock);
+        return 1;
+    }
+
+    printf("HTTP proxy-server listening at the following port %d", PROXY_PORT);
 
     while(1) {
         pthread_t connection_tid;
