@@ -12,8 +12,11 @@
 #define CONN_Q_SIZE 256
 
 void *handle_client(void *arg) {
+    int client_sock_fd = *(int *)arg;
 
+    
 
+    close(client_sock_fd);
     return NULL;
 }
 
@@ -25,7 +28,7 @@ int main (int argc, char** argv) {
     }
 
     struct sockaddr_in listen_addr;
-    memset(&cli_list_sock_fd, 0, sizeof(cli_list_sock_fd));
+    memset(&listen_addr, 0, sizeof(listen_addr));
     listen_addr.sin_family = AF_INET;
     listen_addr.sin_addr.s_addr = INADDR_ANY;
     listen_addr.sin_port = htons(PROXY_PORT);
@@ -49,13 +52,13 @@ int main (int argc, char** argv) {
         return 1;
     }
 
-    printf("HTTP proxy-server listening at the following port %d", PROXY_PORT);
+    printf("HTTP proxy-server listening at the following port %d\n", PROXY_PORT);
 
     while(1) {
         struct sockaddr_in client_addr;
         socklen_t client_addr_len = sizeof(client_addr);
         int client_sock_fd;
-        if ((client_sock_fd = accept(client_sock_fd, (struct sockaddr *)&client_addr, &client_addr_len)) < 0) {
+        if ((client_sock_fd = accept(cli_list_sock_fd, (struct sockaddr *)&client_addr, &client_addr_len)) < 0) {
             perror("Cannot accept new client");
             continue;
         }
@@ -65,6 +68,7 @@ int main (int argc, char** argv) {
             perror("Cannot allocate memory for thread function argument");
             continue;
         }
+        arg = client_sock_fd;
 
         pthread_t connection_tid;
         pthread_attr_t connection_attr;
