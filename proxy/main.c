@@ -72,7 +72,11 @@ int main (int argc, char** argv) {
         pthread_attr_init(&connection_attr);
         pthread_attr_setdetachstate(&connection_attr, PTHREAD_CREATE_DETACHED);
 
-        pthread_create(&connection_tid, &connection_attr, handle_client, arg);
+        if (pthread_create(&connection_tid, &connection_attr, handle_client, arg) != 0) {
+            perror("Cannot create thread for client handling");
+            free(arg);
+            close(client_sock_fd);
+        }
 
         pthread_attr_destroy(&connection_attr);
     }
