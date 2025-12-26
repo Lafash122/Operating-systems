@@ -10,11 +10,19 @@
 
 #define PROXY_PORT 80
 #define CONN_Q_SIZE 256
-#define BUFFER_SZIE 32 * 1024
+#define BUFFER_SIZE 160 * 1024
+#define METHODS_NUM 128
+#define H_NAME_SIZE 256
+#define H_VAL_SIZE 1024
+
+typedef struct HTTP_HEADER {
+    char h_name[H_NAME_SIZE];
+    char h_value[H_VAL_SIZE];
+} HEADER;
 
 int check_meth_line(char *buffer, char *url) {
-    char *method[16];
-    char *version[16];
+    char method[16];
+    char version[16];
 
     if (sscanf(buffer, "%15s %2047s %15s", method, url, version) != 3) {
         printf("Failed to parse HTTP query mettod line");
@@ -44,14 +52,14 @@ void *handle_client(void *arg) {
     int client_sock_fd = *(int *)arg;
     free(arg);
 
-    char *buffer = (char *)calloc(BUFFER_SZIE, sizeof(char));
+    char *buffer = (char *)calloc(BUFFER_SIZE, sizeof(char));
     if (!buffer) {
         perror("Failed to allocate memory for connection");
         close(client_sock_fd);
         return NULL;
     }
 
-    ssize_t readed = read(client_sock_fd, buffer, BUFFER_SZIE - 1);
+    ssize_t readed = read(client_sock_fd, buffer, BUFFER_SIZE - 1);
     if (readed == -1) {
         perror("Failed when read HTTP query");
         close(client_sock_fd);
@@ -65,7 +73,7 @@ void *handle_client(void *arg) {
         return NULL;
     }
 
-    char *url[2048];
+    char url[2048];
     if (check_meth_line(buffer, url)) {
         close(client_sock_fd);
         return NULL;
@@ -125,7 +133,7 @@ int main (int argc, char** argv) {
             perror("Cannot allocate memory for thread function argument");
             continue;
         }
-        arg = client_sock_fd;
+        *arg = client_sock_fd;
 
         pthread_t connection_tid;
         pthread_attr_t connection_attr;
