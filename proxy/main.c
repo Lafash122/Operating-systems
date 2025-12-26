@@ -202,7 +202,7 @@ void *handle_client(void *arg) {
     ssize_t remote_read;
     while ((remote_read = read(remote_sock_fd, buffer, BUFFER_SIZE)) > 0) {
         ssize_t client_sent = 0;
-        while (sent < remote_read) {
+        while (client_sent < remote_read) {
             ssize_t send = write(client_sock_fd, buffer + client_sent, remote_read - client_sent);
             if (send <= 0) {
                 perror("Failed write to client from remote");
