@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define PROXY_PORT 5252
 #define HTTP_PORT 80
 #define CONN_Q_SIZE 256
 #define BUFFER_SIZE 160 * 1024
@@ -20,17 +21,17 @@ int check_meth_line(char *buffer) {
     char version[12];
 
     if (sscanf(buffer, "%15s %2047s %11s", method, url, version) != 3) {
-        printf("Failed to parse HTTP query mettod line");
+        printf("Failed to parse HTTP query mettod line\n");
         return 1;
     }
 
     if (strncmp(method, "GET", 3) != 0) {
-        printf("Sorry, but only GET method is supported");
+        printf("Sorry, but only GET method is supported %s, %s\n", method, url);
         return 1;
     }
 
-    if ((strncmp(version, "HTTP/1.0", 8) != 0) || (strncmp(version, "HTTP/1.1", 8) != 0)) {
-        printf("Sorry, but only HTTP/1.0 or HTTP/1.1 version is supported");
+    if ((strncmp(version, "HTTP/1.0", 8) != 0) && (strncmp(version, "HTTP/1.1", 8) != 0)) {
+        printf("Sorry, but only HTTP/1.0 or HTTP/1.1 version is supported: %s, %s\n", version, url);
         return 1;
     }
 
@@ -44,24 +45,25 @@ int check_meth_line(char *buffer) {
 int check_headers(char *buffer, char *host) {
     char *headers = strstr(buffer, "\r\n");
     if (!headers) {
-        printf("Cannot find headers");
+        printf("Cannot find headers\n");
         return 1;
     }
 
     headers += 2;
     host[0] = '\0';
+    char *connection_h = NULL;
     while(1) {
         if ((headers[0] == '\r') && (headers[1] == '\n'))
             break;
 
         char *colon = strchr(headers, ':');
         if (!colon) {
-            printf("Incorrect structure of header: cannot find colon");
+            printf("Incorrect structure of header: cannot find colon\n");
             return 1;
         }
         size_t h_name_len = colon - headers;
         if ((h_name_len == 0) || (h_name_len >= H_NAME_SIZE)) {
-            printf("Incorrect structure of header: invalid colon location");
+            printf("Incorrect structure of header: invalid colon location\n");
             return 1;
         }
 
@@ -74,12 +76,12 @@ int check_headers(char *buffer, char *host) {
             val_start++;
         char *val_end = strstr(val_start, "\r\n");
         if (!val_end) {
-            printf("Incorrect structure of header: cannot find header end");
+            printf("Incorrect structure of header: cannot find header end\n");
             return 1;
         }
         size_t h_value_len = val_end - val_start;
         if ((h_value_len == 0) || (h_value_len >= H_VAL_SIZE)) {
-            printf("Incorrect structure of header: invalid header end location");
+            printf("Incorrect structure of header: invalid header end location\n");
             return 1;
         }
 
@@ -88,12 +90,40 @@ int check_headers(char *buffer, char *host) {
             host[h_value_len] = '\0';
         }
 
+        if (strcasecmp(h_name, "connection") == 0)
+            connection_h = headers;
+
         headers = val_end + 2;
     }
 
     if (host[0] == 0) {
-        printf("Could not find Host header");
+        printf("Could not find Host header\n");
         return 1;
+    }
+
+    if (connection_h) {
+        char *header_end = strstr(connection_h, "\r\n");
+        if (header_end) {
+            char *val_start = strchr(connection_h, ':');
+            if (val_start) {
+                val_start++;
+                while(*val_start == ' ')
+                    val_start++;
+                size_t val_len = header_end - val_start;
+                memcpy(val_start, "close", 5);
+                if (val_len > 5)
+                    memmove(val_start + 5, val_start, strlen(header_end) + 1);
+            }
+        }
+    }
+    else {
+        char *headers_end = strstr(buffer, "\r\n\r\n");
+        if (headers_end) {
+            const char *connection_line = "Connection: close\r\n";
+            size_t connection_len = strlen(connection_line);
+            memmove(headers_end + connection_len, headers_end, strlen(headers_end) + 1);
+            memcpy(headers_end, connection_line, connection_len);
+        }
     }
 
     return 0;
@@ -149,7 +179,7 @@ void *handle_client(void *arg) {
         return NULL;
     }
     else if (readed == 0) {
-        printf("Client sent end of file");
+        printf("Client sent end of file\n");
         close(client_sock_fd);
         return NULL;
     }
@@ -176,7 +206,7 @@ void *handle_client(void *arg) {
     if ((remote_sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("Cannot create remote socket");
         close(client_sock_fd);
-        return 1;
+        return NULL;
     }
 
     if (connect(remote_sock_fd, (struct sockaddr *)&remote_addr, sizeof(remote_addr)) < 0) {
@@ -217,7 +247,9 @@ void *handle_client(void *arg) {
     if (remote_read == -1)
         perror("Failed when read from remote");
     else if (remote_read == 0)
-        printf("Remote sent end of file");
+        printf("Remote sent end of file\n");
+
+    printf("Connection has been processed\n");
 
     close(client_sock_fd);
     close(remote_sock_fd);
@@ -236,7 +268,7 @@ int main (int argc, char** argv) {
     memset(&listen_addr, 0, sizeof(listen_addr));
     listen_addr.sin_family = AF_INET;
     listen_addr.sin_addr.s_addr = INADDR_ANY;
-    listen_addr.sin_port = htons(HTTP_PORT);
+    listen_addr.sin_port = htons(PROXY_PORT);
 
     int is_reuse_addr = 1;
     if (setsockopt(cli_list_sock_fd, SOL_SOCKET, SO_REUSEADDR, &is_reuse_addr, sizeof(is_reuse_addr)) < 0) {
@@ -257,7 +289,7 @@ int main (int argc, char** argv) {
         return 1;
     }
 
-    printf("HTTP proxy-server listening at the following port %d\n", HTTP_PORT);
+    printf("HTTP proxy-server listening at the following port %d\n", PROXY_PORT);
 
     while(1) {
         struct sockaddr_in client_addr;
