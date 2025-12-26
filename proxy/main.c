@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define PROXY_PORT 80
+#define HTTP_PORT 80
 #define CONN_Q_SIZE 256
 #define BUFFER_SIZE 160 * 1024
 #define H_NAME_SIZE 256
@@ -94,6 +94,12 @@ int check_headers(char *buffer, char *host) {
     return 0;
 }
 
+int resolve_host(char *host, struct sockaddr_in *remote) {
+    
+
+    return 0;
+}
+
 void *handle_client(void *arg) {
     int client_sock_fd = *(int *)arg;
     free(arg);
@@ -123,7 +129,13 @@ void *handle_client(void *arg) {
         return NULL;
     }
 
-
+    struct sockaddr_in remote_addr;
+    memset(&remote_addr, 0, sizeof(remote_addr));
+    remote_addr.sin_family = AF_INET;
+    if (resolve_host(host, &remote_addr)) {
+        close(client_sock_fd);
+        return NULL;
+    }
 
     close(client_sock_fd);
     return NULL;
@@ -140,7 +152,7 @@ int main (int argc, char** argv) {
     memset(&listen_addr, 0, sizeof(listen_addr));
     listen_addr.sin_family = AF_INET;
     listen_addr.sin_addr.s_addr = INADDR_ANY;
-    listen_addr.sin_port = htons(PROXY_PORT);
+    listen_addr.sin_port = htons(HTTP_PORT);
 
     int is_reuse_addr = 1;
     if (setsockopt(cli_list_sock_fd, SOL_SOCKET, SO_REUSEADDR, &is_reuse_addr, sizeof(is_reuse_addr)) < 0) {
@@ -161,7 +173,7 @@ int main (int argc, char** argv) {
         return 1;
     }
 
-    printf("HTTP proxy-server listening at the following port %d\n", PROXY_PORT);
+    printf("HTTP proxy-server listening at the following port %d\n", HTTP_PORT);
 
     while(1) {
         struct sockaddr_in client_addr;
