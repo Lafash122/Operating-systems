@@ -10,9 +10,66 @@
 
 #define PROXY_PORT 80
 #define CONN_Q_SIZE 256
+#define BUFFER_SZIE 32 * 1024
+
+int check_meth_line(char *buffer, char *url) {
+    char *method[16];
+    char *version[16];
+
+    if (sscanf(buffer, "%15s %2047s %15s", method, url, version) != 3) {
+        printf("Failed to parse HTTP query mettod line");
+        free(buffer);
+
+        return 1;
+    }
+
+    if (strncmp(method, "GET", 3) != 0) {
+        printf("Sorry, but only GET method is supported");
+        free(buffer);
+
+        return 1;
+    }
+
+    if (strncmp(version, "HTTP/1.0", 8) != 0) {
+        printf("Sorry, but only HTTP/1.0 unput version is supported");
+        free(buffer);
+
+        return 1;
+    }
+
+    return 0;
+}
 
 void *handle_client(void *arg) {
     int client_sock_fd = *(int *)arg;
+    free(arg);
+
+    char *buffer = (char *)calloc(BUFFER_SZIE, sizeof(char));
+    if (!buffer) {
+        perror("Failed to allocate memory for connection");
+        close(client_sock_fd);
+        return NULL;
+    }
+
+    ssize_t readed = read(client_sock_fd, buffer, BUFFER_SZIE - 1);
+    if (readed == -1) {
+        perror("Failed when read HTTP query");
+        close(client_sock_fd);
+        free(buffer);
+        return NULL;
+    }
+    else if (readed == 0) {
+        printf("Client sent end of file");
+        close(client_sock_fd);
+        free(buffer);
+        return NULL;
+    }
+
+    char *url[2048];
+    if (check_meth_line(buffer, url)) {
+        close(client_sock_fd);
+        return NULL;
+    }
 
     
 
